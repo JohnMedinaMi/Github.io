@@ -1,0 +1,529 @@
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Photobooth</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+  background: url('Bg.jpg') no-repeat center center fixed;
+  background-size: cover;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: Arial, sans-serif;
+  padding-top: 60px;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+canvas#particles {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+    .camera {
+      position: relative;
+      width: 340px;
+      height: 220px;
+      background:
+        repeating-linear-gradient(45deg, #2c2c2c 0px, #1e1e1e 2px, #2c2c2c 4px),
+        radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.1), transparent),
+        linear-gradient(145deg, #2b2b2b, #1a1a1a);
+      border-radius: 16px;
+      border: 1px solid #2a2a2a;
+      box-shadow:
+        inset 0 2px 6px rgba(255, 255, 255, 0.08),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.6),
+        0 18px 36px rgba(0, 0, 0, 0.8),
+        0 0 6px rgba(0, 0, 0, 0.7);
+      margin-top: 30px;
+      backdrop-filter: blur(1px);
+      flex-shrink: 0;
+      z-index: 1;
+    }
+
+    .top-block {
+      position: absolute;
+      top: -35px;
+      left: 15px;
+      width: 310px;
+      height: 35px;
+      background:
+        linear-gradient(to bottom, #2a2a2a, #111),
+        radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.08), transparent);
+      border-radius: 100px 50px 0 0;
+      border-top: 1px solid #3a3a3a;
+      border-bottom: 1px solid #111;
+      box-shadow:
+        inset 0 -2px 4px rgba(255, 255, 255, 0.05),
+        0 2px 6px rgba(0, 0, 0, 0.5);
+    }
+
+    .sensor {
+      position: absolute;
+      top: 7px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 20px;
+      background: radial-gradient(circle at center, #aaa, #444);
+      border-radius: 12px;
+      box-shadow: 0 0 18px rgba(255, 255, 255, 0.25);
+      z-index: 1;
+      border: 1px solid #222;
+    }
+
+    .sensor.flash {
+      animation: flash 0.2s ease-in-out;
+    }
+
+    .shutter-button {
+      position: absolute;
+      top: -48px;
+      right: 50px;
+      width: 65px;
+      height: 25px;
+      background: radial-gradient(circle, #666, #222);
+      border-radius: 12px;
+      border: 2px solid #111;
+      box-shadow:
+        0 3px 6px rgba(0, 0, 0, 0.6),
+        inset 0 1px 2px rgba(255, 255, 255, 0.1),
+        inset 0 -3px 5px rgba(0, 0, 0, 0.8);
+      cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.2s;
+      user-select: none;
+      z-index: 2;
+    }
+
+    .shutter-button:active {
+      transform: translateY(2px);
+      box-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.4),
+        inset 0 1px 1px rgba(255, 255, 255, 0.05),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.6);
+    }
+
+    .lens {
+      position: absolute;
+      top: 45px;
+      left: 105px;
+      width: 130px;
+      height: 130px;
+      background: radial-gradient(circle at 30% 30%, #5a5a5a, #111);
+      border-radius: 50%;
+      border: 10px solid #888;
+      box-shadow:
+        0 0 12px rgba(0, 0, 0, 0.7),
+        inset 0 0 16px rgba(255, 255, 255, 0.05),
+        inset 0 0 35px rgba(0, 0, 0, 0.9);
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .lens::before {
+      content: "";
+      position: absolute;
+      top: 10px;
+      left: 20px;
+      width: 90px;
+      height: 25px;
+      background: rgba(255, 255, 255, 0.07);
+      transform: rotate(-20deg);
+      border-radius: 50%;
+      filter: blur(1.2px);
+    }
+
+    .lens-inner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 60px;
+      height: 60px;
+      background: radial-gradient(circle, #000, #333);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow:
+        inset 0 0 12px #000,
+        0 0 10px rgba(0, 0, 0, 0.6);
+    }
+
+    @keyframes flash {
+      0% { box-shadow: 0 0 60px 25px white; }
+      100% { box-shadow: 0 0 15px rgba(255, 255, 255, 0.2); }
+    }
+
+    .red-dot {
+      width: 12px;
+      height: 12px;
+      background-color: red;
+      border-radius: 50%;
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      box-shadow: 0 0 6px red;
+      transition: background-color 0.1s ease, box-shadow 0.1s ease;
+      z-index: 2;
+    }
+
+    .red-dot.green {
+      background-color: #0f0;
+      box-shadow: 0 0 6px #0f0;
+    }
+
+    @keyframes blinkFast {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .red-dot.blinking {
+      animation: blinkFast 0.1s steps(1, start) infinite;
+    }
+    .canon-logo {
+      position: absolute;
+      top: 12px;
+      left: 25px;
+      font-size: 22px;
+      font-weight: bold;
+      color: white;
+      text-shadow: 1px 1px 2px black;
+      user-select: none;
+      z-index: 2;
+    }
+
+    .gallery {
+      margin-top: 30px;
+      width: 320px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-y: auto;
+      max-height: 60vh;
+      scroll-behavior: smooth;
+      padding-bottom: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .gallery img {
+      width: 100%;
+      border: 4px solid #444;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      margin-bottom: 20px;
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+      animation: popIn 0.5s forwards;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      scroll-margin-top: 20px;
+      cursor: pointer;
+      background: black;
+    }
+
+    .gallery img:hover {
+      transform: scale(1.03);
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .flash-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: white;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 1000;
+      animation-fill-mode: forwards;
+    }
+
+    .flash-screen.active {
+      animation: flashScreenAnim 0.3s ease forwards;
+    }
+
+    @keyframes flashScreenAnim {
+      0% {
+        opacity: 0.8;
+      }
+      100% {
+        opacity: 0;
+      }
+    }
+
+    .arrow-hint {
+      position: absolute;
+      top: -90px;
+      right: 45px;
+      text-align: center;
+      font-size: 18px;
+      color: white;
+      text-shadow: 1px 1px 2px black;
+      animation: bounceArrow 1.2s infinite;
+      font-weight: bold;
+      cursor: default;
+      user-select: none;
+      z-index: 2;
+    }
+
+    .arrow-hint span {
+      display: block;
+      font-size: 14px;
+      margin-top: 2px;
+    }
+
+    @keyframes bounceArrow {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+
+    @keyframes popIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeInZoom {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5);
+      }
+      100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+
+    @keyframes fadeOutZoom {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+      }
+    }
+
+    @media (max-width: 400px) {
+      .camera {
+        width: 90vw;
+        height: calc(90vw * 220 / 340);
+      }
+      .gallery {
+        width: 90vw;
+        max-height: 50vh;
+      }
+      .shutter-button {
+        top: -40px;
+        right: 20px;
+        width: 50px;
+        height: 20px;
+      }
+      .canon-logo {
+        font-size: 18px;
+        top: 10px;
+        left: 15px;
+      }
+      .arrow-hint {
+        top: -70px;
+        right: 20px;
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="particles"></canvas>
+  <!-- Your content here -->
+
+  <script src="particles.js"></script>
+
+<div class="camera" id="camera" data-videos="video3.mp4,video1.mp4,video2.mp4" data-photos="photos3.png,photos1.jpg,photos2.jpg">
+  <div class="top-block">
+    <div class="sensor" id="sensor"></div>
+  </div>
+  <div class="arrow-hint">&#8675; <span>Tap to shoot</span></div>
+  <div class="shutter-button" id="shutter"></div>
+  <div class="canon-logo">Photaragis</div>
+  <div class="red-dot"></div>
+  <div class="lens" id="lens">
+    <div class="lens-inner"></div>
+  </div>
+</div>
+
+<div class="gallery" id="gallery" tabindex="0" aria-label="Photo gallery"></div>
+<div class="flash-screen" id="flashScreen"></div>
+<audio id="shutter-sound" src="shutter.mp3" preload="auto"></audio>
+
+<script>
+  const shutterButton = document.getElementById('shutter');
+  const sensor = document.getElementById('sensor');
+  const gallery = document.getElementById('gallery');
+  const camera = document.getElementById('camera');
+  const shutterSound = document.getElementById('shutter-sound');
+  const redDot = document.querySelector('.red-dot');
+  const flashScreen = document.getElementById('flashScreen');
+
+  // Video URLs for overlay preview
+  const videoList = camera.dataset.videos.split(',');
+  // Photo URLs for gallery
+  const photoList = camera.dataset.photos.split(',');
+  const flashDelay = 500;
+  let mediaIndex = 0;
+
+  function showVideoWithOverlay(videoSrc) {
+    const preview = document.createElement('div');
+    preview.style.position = 'fixed';
+    preview.style.top = '50%';
+    preview.style.left = '50%';
+    preview.style.transform = 'translate(-50%, -50%) scale(1)';
+    preview.style.zIndex = '999';
+    preview.style.border = '6px solid white';
+    preview.style.boxShadow = '0 0 20px rgba(0,0,0,0.5)';
+    preview.style.borderRadius = '12px';
+    preview.style.overflow = 'hidden';
+    preview.style.background = '#000';
+    preview.style.animation = 'fadeInZoom 0.4s ease';
+    preview.style.cursor = 'pointer';
+    preview.setAttribute('role', 'dialog');
+    preview.setAttribute('aria-label', 'Captured video preview');
+
+    const video = document.createElement('video');
+    video.src = videoSrc;
+    video.alt = "Captured video preview";
+    video.style.maxWidth = '300px';
+    video.style.display = 'block';
+    video.controls = false;
+    video.autoplay = true;
+    video.muted = true;
+    video.loop = true;
+    video.playsInline = true;
+
+    preview.appendChild(video);
+    document.body.appendChild(preview);
+
+    // Clicking preview closes it immediately
+    preview.addEventListener('click', () => {
+      preview.remove();
+      addPhotoToGallery(photoList[mediaIndex].trim());
+      mediaIndex++;
+    });
+
+    // Auto close after 1 second if not clicked
+    setTimeout(() => {
+      if (document.body.contains(preview)) {
+        preview.style.animation = 'fadeOutZoom 0.4s ease';
+        preview.addEventListener('animationend', () => {
+          preview.remove();
+          addPhotoToGallery(photoList[mediaIndex].trim());
+          mediaIndex++;
+        }, { once: true });
+      }
+    }, 1000);
+  }
+
+  function addPhotoToGallery(photoSrc) {
+    const galleryImg = document.createElement('img');
+    galleryImg.src = photoSrc;
+    galleryImg.alt = "Captured photo in gallery";
+    gallery.appendChild(galleryImg);
+    // Scroll gallery container so the new image is fully visible at bottom
+    const galleryRect = gallery.getBoundingClientRect();
+    const imgRect = galleryImg.getBoundingClientRect();
+    const scrollOffset = gallery.scrollTop + (imgRect.bottom - galleryRect.bottom) + 20; // 20px margin-bottom
+    gallery.scrollTo({ top: scrollOffset, behavior: 'smooth' });
+  }
+
+  function triggerFlashScreen() {
+    flashScreen.classList.add('active');
+    flashScreen.addEventListener('animationend', () => {
+      flashScreen.classList.remove('active');
+    }, { once: true });
+  }
+
+  shutterButton.addEventListener('click', () => {
+    if (mediaIndex >= videoList.length) return;
+
+    shutterSound.currentTime = 0;
+    shutterSound.play();
+
+    // Flash red-dot
+    redDot.classList.add('green');
+    redDot.style.animation = 'blinkFast 0.1s steps(1, start) 1';
+    setTimeout(() => {
+      redDot.classList.remove('green');
+      redDot.style.animation = '';
+    }, 50);
+
+    // Camera flash effect
+    setTimeout(() => {
+      sensor.classList.add('flash');
+      triggerFlashScreen();
+      setTimeout(() => sensor.classList.remove('flash'), 200);
+    }, flashDelay);
+
+    // Show overlay + video after flash
+    setTimeout(() => {
+      const videoSrc = videoList[mediaIndex].trim();
+      showVideoWithOverlay(videoSrc);
+    }, flashDelay + 300);
+  });
+  
+  const canvas = document.getElementById('particles');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const particles = [];
+
+for (let i = 0; i < 100; i++) {
+  particles.push({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    radius: Math.random() * 2 + 1,
+    dx: (Math.random() - 0.5) * 0.5,
+    dy: (Math.random() - 0.5) * 0.5,
+    opacity: Math.random()
+  });
+}
+
+function drawParticles() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+  particles.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2, false);
+    ctx.fill();
+  });
+}
+
+function animateParticles() {
+  particles.forEach(p => {
+    p.x += p.dx;
+    p.y += p.dy;
+    if (p.x < 0 || p.x > canvas.width) p.dx *= -1;
+    if (p.y < 0 || p.y > canvas.height) p.dy *= -1;
+  });
+  drawParticles();
+  requestAnimationFrame(animateParticles);
+}
+
+animateParticles();
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+</script>
+
+</body>
+</html>
